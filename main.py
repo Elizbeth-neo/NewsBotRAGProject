@@ -10,7 +10,16 @@ from langchain_huggingface import HuggingFaceEndpoint
 from langchain_community.document_loaders import DataFrameLoader
 from langchain.chains.retrieval_qa.base import RetrievalQA
 import logging
+from src.config import Config
+
 logging.basicConfig(level=logging.INFO)
+
+INDEX_NAME = os.getenv('INDEX_NAME')
+TOP_K = Config().retriever_top_k
+HISTORY_DIR = Config().history_dir
+MODEL_ID = Config().llama_model
+BGE_MODEL_ID = Config().embedding_bge
+DEVICE = Config().device
 
 class ChatBot:
     def __init__(self):
@@ -23,9 +32,9 @@ class ChatBot:
         self.index_path = os.getenv('INDEX_NAME')
 
 
-        self.emb_model_name = 'BAAI/bge-m3'
+        self.emb_model_name = BGE_MODEL_ID
         self.embeddings = HuggingFaceBgeEmbeddings(model_name=self.emb_model_name,
-                                                   model_kwargs={'device': 'cuda'},
+                                                   model_kwargs={'device': DEVICE},
                                                    encode_kwargs={'normalize_embeddings': True}
                                                    )
 
@@ -44,7 +53,7 @@ class ChatBot:
         else:
             self.docsearch = P.from_existing_index(self.index_name, self.embeddings)
 
-        self.retriever = self.docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+        self.retriever = self.docsearch.as_retriever(search_type="similarity", search_kwargs={"k": TOP_K})
 
         repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         logging.info(f'run with "{repo_id}"')
@@ -86,7 +95,8 @@ class ChatBot:
         news_df = pd.read_csv(os.getenv('DATA_PATH'))
         loader = DataFrameLoader(news_df, page_content_column='text')
         documents = loader.load()
-        text_splitter = CharacterTextSplitter(chunk_size=700, chunk_overlap=50)
+        text_splitter = CharacterTextSplitter(chunk_size=Config().chunk_size,
+                                              chunk_overlap=Config().chunk_overlap)
         self.docs = text_splitter.split_documents(documents)
 
     def ask_question(self, question):
@@ -106,6 +116,7 @@ def main():
         else:
             answer = chatbot.ask_question(user_input)
             print(f"Answer: {answer}")
+
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ class ChromaDb:
         )
         if self.index_name not in pc.list_indexes().names():
             logging.info(f'Creating new indexes')
-            docs = load_and_prepare_documents
+            docs = load_and_prepare_documents()
             pc.create_index(
                 name=self.index_name,
                 dimension=1024,
