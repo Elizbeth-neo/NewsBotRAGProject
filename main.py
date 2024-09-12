@@ -47,6 +47,7 @@ class ChatBot:
         self.retriever = self.docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
         repo_id = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+        logging.info(f'run with "{repo_id}"')
         self.llm = HuggingFaceEndpoint(
             repo_id=repo_id,
             temperature=0.8,
