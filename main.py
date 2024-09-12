@@ -1,6 +1,6 @@
 import pandas as pd
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from dotenv import load_dotenv
 import os
 from pinecone import Pinecone, ServerlessSpec
@@ -9,7 +9,8 @@ from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain_community.document_loaders import DataFrameLoader
 from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain_community.vectorstores import FAISS
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class ChatBot:
     def __init__(self):
@@ -19,35 +20,29 @@ class ChatBot:
         self.index_name = os.environ.get("PINECONE_API_INDEX_NAME")
         self.region = os.getenv('PINECONE_API_ENV')
         self.cloud = os.getenv('PINECONE_API_CLOUD')
-        self.index_path = os.getenv('FAISS_INDEX_PATH')
-        self.storage_type = os.getenv('STORAGE_TYPE')
+        self.index_path = os.getenv('INDEX_NAME')
 
-        self.embeddings = HuggingFaceEmbeddings()
-        self.ru_embeddings = HuggingFaceEmbeddings(model_name='cointegrated/rubert-tiny2')
 
-        if self.storage_type == 'faiss':
-            if os.path.exists(self.index_path):
-                self.docsearch = FAISS.load_local(self.index_path, self.ru_embeddings, allow_dangerous_deserialization=True)
-            else:
-                self.load_and_prepare_documents()
-                self.docsearch = FAISS.from_documents(self.docs, self.ru_embeddings)
-                self.docsearch.save_local(self.index_path)
+        self.emb_model_name = 'BAAI/bge-m3'
+        self.embeddings = HuggingFaceBgeEmbeddings(model_name=self.emb_model_name,
+                                                   model_kwargs={'device': 'cuda'},
+                                                   encode_kwargs={'normalize_embeddings': True}
+                                                   )
 
-        elif self.storage_type == 'pinecone':
-            if self.index_name not in self.pc.list_indexes().names():
-                self.load_and_prepare_documents()
-                self.pc.create_index(
-                    name=self.index_name,
-                    dimension=768,
-                    metric='cosine',
-                    spec=ServerlessSpec(
-                        cloud=self.cloud,
-                        region=self.region
-                    )
+        if self.index_name not in self.pc.list_indexes().names():
+            self.load_and_prepare_documents()
+            self.pc.create_index(
+                name=self.index_name,
+                dimension=1024, #for bge-m3
+                metric='cosine',
+                spec=ServerlessSpec(
+                    cloud=self.cloud,
+                    region=self.region
                 )
-                self.docsearch = P.from_documents(self.docs, self.embeddings, index_name=self.index_name)
-            else:
-                self.docsearch = P.from_existing_index(self.index_name, self.embeddings)
+            )
+            self.docsearch = P.from_documents(self.docs, self.embeddings, index_name=self.index_name)
+        else:
+            self.docsearch = P.from_existing_index(self.index_name, self.embeddings)
 
         self.retriever = self.docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
@@ -101,6 +96,7 @@ class ChatBot:
 
 def main():
     chatbot = ChatBot()
+    logging.info(f'ChatBot started')
 
     while True:
         user_input = input("Ask a question (type 'exit' to quit): ")
