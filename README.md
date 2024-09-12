@@ -2,10 +2,10 @@
 
 **Usage**
 
-To run with google/gemma-2b-it:
+To run with Ollama LLM "llama3.1":
 
 ```python src/app.py```
 
-To run with mistralai/Mixtral-8x7B-Instruct-v0.1:
+To run with HuggingFaceEndpointLLM "mistralai/Mixtral-8x7B-Instruct-v0.1":
 
 ```python main.py```
