@@ -28,17 +28,14 @@ class OllamaLLM:
                  url: str = config.ollama_url):
         self.model_id = model_id
         self.model_url = url
-        self.model = self.load_ollama_model()
         self.chat = []
         self.device = device
-
-    def load_ollama_model(self):
-        llm = Ollama(
+        self.model = Ollama(
             model=self.model_id,
             base_url=self.model_url,
             verbose=True
         )
-        return llm
+
 
     def generate(self, question, indexdb, k=TOP_K):
         template = """

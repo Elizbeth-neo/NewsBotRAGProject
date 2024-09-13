@@ -2,7 +2,7 @@ import os
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import pandas as pd
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import DataFrameLoader
 import config
 from langchain.vectorstores import Pinecone as PL
@@ -17,7 +17,7 @@ def load_and_prepare_documents():
     news_df = pd.read_csv(os.getenv(DATA_PATH))
     loader = DataFrameLoader(news_df, page_content_column='text')
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=config.chunk_size,
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=config.chunk_size,
                                           chunk_overlap=config.chunk_overlap)
     docs = text_splitter.split_documents(documents)
     return docs
